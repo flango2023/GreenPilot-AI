@@ -45,11 +45,33 @@ class Resource:
     # S3-specific
     storage_class: Optional[str] = None
     access_frequency: Optional[str] = None  # "frequent" | "infrequent" | "rare"
+    versioning_enabled: Optional[bool] = None
 
     # Governance-relevant flags
     publicly_accessible: Optional[bool] = None
     encrypted: Optional[bool] = None
     contains_personal_data: Optional[bool] = None
+
+
+@dataclass
+class IamUser:
+    """One row of an AWS IAM credential report (`iam:GetCredentialReport`),
+    parsed down to the fields the NIS2 credential-hygiene rule needs.
+
+    Field names deliberately mirror the credential report's own column
+    names (see credential_report.py) rather than being renamed, so the
+    mapping from raw AWS output stays traceable.
+    """
+
+    user: str
+    is_root: bool
+    mfa_active: bool
+    has_console_access: bool
+    days_since_password_used: Optional[int] = None
+    key1_active: bool = False
+    key1_age_days: Optional[int] = None
+    key2_active: bool = False
+    key2_age_days: Optional[int] = None
 
 
 @dataclass

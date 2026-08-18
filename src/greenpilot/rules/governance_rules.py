@@ -10,7 +10,10 @@ same framing.
 
 from __future__ import annotations
 
-from ..models import CarbonEstimate, Finding, Resource
+from ..models import CarbonEstimate, Finding, IamUser, Resource
+
+KEY_AGE_THRESHOLD_DAYS = 90
+INACTIVE_USER_THRESHOLD_DAYS = 90
 
 EU_EEA_REGIONS = {
     "eu-west-1",
@@ -76,6 +79,119 @@ def rule_nis2_security_posture(resources: list[Resource]) -> list[Finding]:
                     description=(
                         f"{r.resource_id} has no encryption at rest configured, a common "
                         "baseline control referenced under NIS2 risk-management measures."
+                    ),
+                    effort="low",
+                    regulation="NIS2",
+                )
+            )
+        if r.service == "S3" and r.versioning_enabled is False:
+            findings.append(
+                Finding(
+                    resource_id=r.resource_id,
+                    service=r.service,
+                    category="governance",
+                    title="Bucket versioning not enabled",
+                    description=(
+                        f"{r.resource_id} has no versioning configured. Without it, "
+                        "an accidental delete or overwrite is unrecoverable, a gap "
+                        "under NIS2 resilience and incident-recovery expectations."
+                    ),
+                    effort="low",
+                    regulation="NIS2",
+                )
+            )
+    return findings
+
+
+def rule_iam_credential_hygiene(users: list[IamUser]) -> list[Finding]:
+    """Credential hygiene, from a real AWS IAM credential report: root
+    account access keys, missing MFA, stale access keys, and inactive
+    console users. These are standard NIS2 risk-management controls, and
+    the same checks a real AWS security review starts with."""
+    findings = []
+    for u in users:
+        if u.is_root and (u.key1_active or u.key2_active):
+            findings.append(
+                Finding(
+                    resource_id=u.user,
+                    service="ACCOUNT",
+                    category="governance",
+                    title="Root account has active access keys",
+                    description=(
+                        "The AWS root account has at least one active access key. "
+                        "AWS recommends the root account never hold access keys; "
+                        "this is a critical NIS2 risk-management finding."
+                    ),
+                    effort="low",
+                    regulation="NIS2",
+                )
+            )
+        if u.is_root and not u.mfa_active:
+            findings.append(
+                Finding(
+                    resource_id=u.user,
+                    service="ACCOUNT",
+                    category="governance",
+                    title="Root account has no MFA",
+                    description=(
+                        "The AWS root account has no multi-factor authentication "
+                        "configured. This is a critical NIS2 risk-management finding."
+                    ),
+                    effort="low",
+                    regulation="NIS2",
+                )
+            )
+        if u.has_console_access and not u.mfa_active and not u.is_root:
+            findings.append(
+                Finding(
+                    resource_id=u.user,
+                    service="ACCOUNT",
+                    category="governance",
+                    title="Console user without MFA",
+                    description=(
+                        f"{u.user} has console access but no MFA configured, a "
+                        "baseline NIS2 access-control gap."
+                    ),
+                    effort="low",
+                    regulation="NIS2",
+                )
+            )
+        for key_active, key_age, label in (
+            (u.key1_active, u.key1_age_days, "Access key 1"),
+            (u.key2_active, u.key2_age_days, "Access key 2"),
+        ):
+            if key_active and key_age is not None and key_age > KEY_AGE_THRESHOLD_DAYS:
+                findings.append(
+                    Finding(
+                        resource_id=u.user,
+                        service="ACCOUNT",
+                        category="governance",
+                        title=f"{label} is {key_age} days old",
+                        description=(
+                            f"{u.user}'s {label.lower()} has not been rotated in over "
+                            f"{KEY_AGE_THRESHOLD_DAYS} days. Regular rotation is a "
+                            "standard NIS2 credential-hygiene control."
+                        ),
+                        effort="low",
+                        regulation="NIS2",
+                    )
+                )
+        if (
+            not u.is_root
+            and u.has_console_access
+            and u.days_since_password_used is not None
+            and u.days_since_password_used > INACTIVE_USER_THRESHOLD_DAYS
+        ):
+            findings.append(
+                Finding(
+                    resource_id=u.user,
+                    service="ACCOUNT",
+                    category="governance",
+                    title="Inactive console user",
+                    description=(
+                        f"{u.user} has not logged in for "
+                        f"{u.days_since_password_used} days but still has console "
+                        "access. Review whether the account should be deactivated."
                     ),
                     effort="low",
                     regulation="NIS2",

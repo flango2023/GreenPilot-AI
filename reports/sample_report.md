@@ -3,7 +3,7 @@
 **Company:** Acme Tech Solutions GmbH  
 **Generated:** 2026-08-18  
 **Resources analyzed:** 15  
-**Findings flagged:** 14
+**Findings flagged:** 24
 
 ## Executive Summary
 
@@ -73,6 +73,16 @@
 - **Publicly accessible resource** (ec2-api-06): ec2-api-06 is reachable from the public internet. Under NIS2's risk-management duties, confirm this is intentional and covered by your access-control and monitoring baseline.
 - **Storage not encrypted at rest** (rds-analytics-03): rds-analytics-03 has no encryption at rest configured, a common baseline control referenced under NIS2 risk-management measures.
 - **Publicly accessible resource** (s3-active-assets): s3-active-assets is reachable from the public internet. Under NIS2's risk-management duties, confirm this is intentional and covered by your access-control and monitoring baseline.
+- **Bucket versioning not enabled** (s3-active-assets): s3-active-assets has no versioning configured. Without it, an accidental delete or overwrite is unrecoverable, a gap under NIS2 resilience and incident-recovery expectations.
+- **Root account has active access keys** (&lt;root_account&gt;): The AWS root account has at least one active access key. AWS recommends the root account never hold access keys; this is a critical NIS2 risk-management finding.
+- **Root account has no MFA** (&lt;root_account&gt;): The AWS root account has no multi-factor authentication configured. This is a critical NIS2 risk-management finding.
+- **Access key 1 is 1681 days old** (&lt;root_account&gt;): &lt;root_account&gt;'s access key 1 has not been rotated in over 90 days. Regular rotation is a standard NIS2 credential-hygiene control.
+- **Console user without MFA** (bob): bob has console access but no MFA configured, a baseline NIS2 access-control gap.
+- **Access key 1 is 580 days old** (bob): bob's access key 1 has not been rotated in over 90 days. Regular rotation is a standard NIS2 credential-hygiene control.
+- **Access key 1 is 910 days old** (ci-deploy): ci-deploy's access key 1 has not been rotated in over 90 days. Regular rotation is a standard NIS2 credential-hygiene control.
+- **Access key 2 is 910 days old** (ci-deploy): ci-deploy's access key 2 has not been rotated in over 90 days. Regular rotation is a standard NIS2 credential-hygiene control.
+- **Console user without MFA** (former-contractor): former-contractor has console access but no MFA configured, a baseline NIS2 access-control gap.
+- **Inactive console user** (former-contractor): former-contractor has not logged in for 585 days but still has console access. Review whether the account should be deactivated.
 
 ### Emissions Reporting (CSRD)
 

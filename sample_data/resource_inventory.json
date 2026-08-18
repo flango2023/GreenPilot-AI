@@ -149,6 +149,7 @@
     "storage_gb": 500,
     "publicly_accessible": true,
     "encrypted": true,
-    "contains_personal_data": true
+    "contains_personal_data": true,
+    "versioning_enabled": false
   }
 ]

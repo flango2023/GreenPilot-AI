@@ -1,7 +1,8 @@
-from greenpilot.models import CarbonEstimate, Resource
+from greenpilot.models import CarbonEstimate, IamUser, Resource
 from greenpilot.rules.governance_rules import (
     rule_csrd_emissions_reporting,
     rule_gdpr_data_residency,
+    rule_iam_credential_hygiene,
     rule_nis2_security_posture,
 )
 
@@ -70,6 +71,76 @@ def test_private_encrypted_resource_is_not_flagged():
         encrypted=True,
     )
     assert rule_nis2_security_posture([r]) == []
+
+
+def test_root_account_with_active_key_and_no_mfa_raises_two_critical_findings():
+    root = IamUser(
+        user="<root_account>",
+        is_root=True,
+        mfa_active=False,
+        has_console_access=True,
+        key1_active=True,
+        key1_age_days=10,
+    )
+    findings = rule_iam_credential_hygiene([root])
+    titles = {f.title for f in findings}
+    assert "Root account has active access keys" in titles
+    assert "Root account has no MFA" in titles
+    assert all(f.regulation == "NIS2" for f in findings)
+
+
+def test_console_user_without_mfa_is_flagged_but_not_as_root_issue():
+    user = IamUser(
+        user="bob", is_root=False, mfa_active=False, has_console_access=True
+    )
+    findings = rule_iam_credential_hygiene([user])
+    assert len(findings) == 1
+    assert findings[0].title == "Console user without MFA"
+
+
+def test_service_account_without_console_access_is_not_flagged_for_mfa():
+    service_account = IamUser(
+        user="ci-deploy",
+        is_root=False,
+        mfa_active=False,
+        has_console_access=False,
+        key1_active=True,
+        key1_age_days=5,
+    )
+    findings = rule_iam_credential_hygiene([service_account])
+    assert all(f.title != "Console user without MFA" for f in findings)
+
+
+def test_stale_access_key_is_flagged_over_threshold_only():
+    fresh = IamUser(
+        user="fresh-key", is_root=False, mfa_active=True, has_console_access=True,
+        key1_active=True, key1_age_days=30,
+    )
+    stale = IamUser(
+        user="stale-key", is_root=False, mfa_active=True, has_console_access=True,
+        key1_active=True, key1_age_days=200,
+    )
+    assert rule_iam_credential_hygiene([fresh]) == []
+    findings = rule_iam_credential_hygiene([stale])
+    assert len(findings) == 1
+    assert "200 days old" in findings[0].title
+
+
+def test_inactive_console_user_is_flagged():
+    user = IamUser(
+        user="former-contractor", is_root=False, mfa_active=True,
+        has_console_access=True, days_since_password_used=400,
+    )
+    findings = rule_iam_credential_hygiene([user])
+    assert any(f.title == "Inactive console user" for f in findings)
+
+
+def test_clean_user_raises_nothing():
+    user = IamUser(
+        user="alice", is_root=False, mfa_active=True, has_console_access=True,
+        days_since_password_used=1, key1_active=True, key1_age_days=10,
+    )
+    assert rule_iam_credential_hygiene([user]) == []
 
 
 def test_csrd_note_reports_current_footprint():

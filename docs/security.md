@@ -6,16 +6,17 @@ This documents how the security posture described on [greenpilotai.com/security.
 
 The live product's Security page states four principles: read-only onboarding by default, least-privilege permissions, no changes without approval, and revocable access at any time by deleting the IAM role or rotating credentials.
 
-[`iam/read-only-collector-policy.json`](../iam/read-only-collector-policy.json) is a concrete least-privilege IAM policy scoped to exactly what this engine's data model needs to populate `resource_inventory.json` and `cost_and_usage.csv` from a real account:
+[`iam/read-only-collector-policy.json`](../iam/read-only-collector-policy.json) is the exact least-privilege IAM policy `aws/collector.py` needs, and this is not aspirational: it's what live mode actually calls.
 
-- Cost Explorer (`ce:Get*`) for billing data
-- CloudWatch (`cloudwatch:GetMetricData`, `GetMetricStatistics`, `ListMetrics`) for the CPU utilization the idle/underutilized EC2 rule needs
-- `Describe*`/`List*`/`Get*` calls on EC2, RDS, and S3 for configuration state: instance types, attachment, storage class, public-access and encryption flags
-- `sts:GetCallerIdentity` for a basic connectivity check
+- Cost Explorer (`ce:Get*`), reserved for a future Cost Explorer-based pricing source (see the "not yet implemented" note below); not called by the current collector.
+- CloudWatch (`cloudwatch:GetMetricData`, `GetMetricStatistics`, `ListMetrics`) for EC2 CPU utilization, RDS replica connection counts, and S3 bucket size.
+- `Describe*`/`List*`/`Get*` calls on EC2, RDS, and S3 for configuration state: instance types, attachment, storage class, public-access block, encryption, versioning.
+- `iam:GenerateCredentialReport` and `iam:GetCredentialReport`, the two calls behind the NIS2 credential-hygiene checks (root account keys, MFA, stale keys, inactive users). No other `iam:` action is Allow-listed.
+- `sts:GetCallerIdentity` for the connectivity check.
 
-There is no `Put*`, `Delete*`, `Terminate*`, `Modify*`, or `Create*` action anywhere in the Allow statement. A second statement adds an explicit `Deny` on the specific destructive actions closest to what this engine touches: terminate/stop/delete/modify on EC2/RDS/S3, plus a blanket `iam:*`/`organizations:*` deny. That is redundant with IAM's default-deny in isolation, but it is a real guardrail in practice: if this policy is ever attached to a role alongside something broader, the explicit `Deny` still wins.
+There is no `Put*`, `Delete*`, `Terminate*`, `Modify*`, or `Create*` action anywhere in the Allow statement. A second statement adds an explicit `Deny` on the specific destructive actions closest to what this engine touches: terminate/stop/delete/modify on EC2/RDS/S3, plus verb-prefix wildcards (`iam:Create*`, `iam:Delete*`, `iam:Put*`, `iam:Update*`, `iam:Attach*`, `iam:Detach*`, `iam:Remove*`, `iam:Deactivate*`, `iam:Add*`) rather than a blanket `iam:*`, specifically so that wildcard doesn't shadow the two IAM reads the collector actually needs. That's a real guardrail in practice: if this policy is ever attached to a role alongside something broader, the explicit `Deny` still wins. `tests/test_iam_policy.py` checks both directions: that real destructive actions are covered, and that the two Allow-listed reads are not accidentally caught by the same patterns.
 
-Nothing in `src/greenpilot/` calls the AWS API at all. Version 1 only reads local files (see [docs/architecture.md](architecture.md)), so this policy documents what a real collector would need, matching the live product's "you configure and review permissions before granting access" statement, not something this code currently exercises.
+Every call `aws/collector.py` makes is one of the actions above; see [docs/architecture.md](architecture.md) for how the collector is structured (client-injection, not a Session, specifically so it's testable without a real account) and `tests/test_aws_collector.py` for the tests, which run against `botocore.stub.Stubber`, never a live account.
 
 ## Data handled by this repo
 
@@ -27,7 +28,7 @@ Nothing in `src/greenpilot/` calls the AWS API at all. Version 1 only reads loca
 ## Repo-level controls
 
 - [CodeQL](../.github/workflows/codeql.yml): static analysis on every push/PR and weekly, using GitHub's default Python query suite.
-- [Dependabot](../.github/dependabot.yml): automated updates for the Python dependency (currently `pytest` only) and for the GitHub Actions themselves.
+- [Dependabot](../.github/dependabot.yml): automated updates for the Python dependencies (`pytest`, and `boto3` for the optional `aws` extra) and for the GitHub Actions themselves.
 - CI (`pytest`) enforces the rule/engine/escaping tests on every push, so a regression in any of this cannot land on `main` silently.
 - No write-capable GitHub Actions permissions and no secrets used in any workflow, so a malicious pull request from a fork has nothing to reach.
 
@@ -48,7 +49,7 @@ Matching the live site's own stated pilot-stage limitations:
 
 - No ISO 27001 or SOC 2. Not claimed by the live product, and not applicable to a portfolio repository.
 - No penetration test has been run against this code.
-- Encryption in transit or at rest does not apply here: this is a local CLI tool with no network calls and no server component.
+- This is a local CLI tool with no server component. Live mode's only network calls are to AWS's own API endpoints via boto3, which uses TLS by default; there is no custom transport code here to audit. Demo mode makes no network calls at all.
 - RBAC, automated rollback, and audit logging are live-product roadmap items, not something this repo implements.
 
 ## Reporting a concern

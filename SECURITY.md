@@ -14,9 +14,8 @@ You will get an acknowledgment within 5 business days. Credible reports are inve
 
 This repository ships:
 
-- A local, offline Python rule engine, with no network calls and no AWS API calls
-- Synthetic sample data only, never real customer or AWS account data
-- No secrets, credentials, or API keys anywhere in the codebase or history
+- A rule engine that runs two ways: fully offline against committed synthetic sample data (no network calls, no AWS account needed), or read-only against a real AWS account via boto3 (`--source live`), using only the actions in `iam/read-only-collector-policy.json`. Neither path ever calls a mutating AWS API.
+- No secrets, credentials, or API keys committed anywhere in the codebase or history. Live mode uses whatever AWS credentials you already have configured (env vars, `~/.aws/credentials`, or an assumed role); this repository never stores or transmits them anywhere itself.
 
 For the security model of the live product this repo supports (IAM access model, data handling, third-party services, current certification status), see [docs/security.md](docs/security.md) and the live [greenpilotai.com/security.html](https://greenpilotai.com/security.html).
 
