@@ -13,3 +13,16 @@ venv/
 # Generated reports (the committed reports/sample_report.md is kept on purpose)
 reports/*.md
 !reports/sample_report.md
+
+# Credentials / secrets — belt-and-suspenders for when a real AWS collector
+# lands (see docs/architecture.md roadmap). Nothing here should ever exist
+# in this repo, committed or not, but keep git from ever staging it by accident.
+.env
+.env.*
+*.pem
+*.key
+credentials
+.aws/
+secrets.json
+*_rsa
+*_ed25519

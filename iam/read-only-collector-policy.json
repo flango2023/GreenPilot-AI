@@ -1,0 +1,55 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GreenPilotReadOnlyCollector",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetCostForecast",
+        "ce:GetDimensionValues",
+        "ce:GetTags",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics",
+        "ec2:DescribeInstances",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeRegions",
+        "ec2:DescribeTags",
+        "ec2:DescribeSecurityGroups",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBClusters",
+        "rds:ListTagsForResource",
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation",
+        "s3:GetBucketTagging",
+        "s3:GetBucketLifecycleConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketAcl",
+        "s3:GetEncryptionConfiguration",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ExplicitDenyOnDestructiveActions",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:RunInstances",
+        "ec2:DeleteVolume",
+        "rds:DeleteDBInstance",
+        "rds:ModifyDBInstance",
+        "rds:RebootDBInstance",
+        "s3:DeleteBucket",
+        "s3:DeleteObject",
+        "s3:PutObject",
+        "s3:PutBucketPolicy",
+        "iam:*",
+        "organizations:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -49,8 +49,23 @@ def load_resources(data_dir: Path) -> list[Resource]:
                 f"{resource_id} appears in resource_inventory.json but has no "
                 "matching line item in cost_and_usage.csv"
             )
+        cost = costs[resource_id]
+        if cost < 0:
+            # Negative cost would flow straight through the savings-ratio
+            # math in cost_rules.py/carbon.py and produce a nonsensical,
+            # inflated "savings" figure instead of failing loudly.
+            raise ValueError(
+                f"{resource_id} has a negative monthly_cost ({cost}) in "
+                "cost_and_usage.csv — refusing to analyze untrusted/malformed data."
+            )
+        hours = item.get("hours_running_per_month")
+        if hours is not None and hours < 0:
+            raise ValueError(
+                f"{resource_id} has a negative hours_running_per_month ({hours}) "
+                "in resource_inventory.json."
+            )
         kwargs = {k: v for k, v in item.items() if k in _RESOURCE_FIELD_NAMES}
-        resources.append(Resource(monthly_cost=costs[resource_id], **kwargs))
+        resources.append(Resource(monthly_cost=cost, **kwargs))
     return resources
 
 

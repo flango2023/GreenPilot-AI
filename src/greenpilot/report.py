@@ -15,12 +15,38 @@ _REGULATION_LABELS = {
 }
 
 
+def _escape_md(value: str) -> str:
+    """Neutralize a value pulled from resource data (or the --company flag)
+    before it's interpolated into the report.
+
+    Every field rendered below (resource IDs, titles, descriptions,
+    rollback notes, company name) ultimately traces back to
+    resource_inventory.json / cost_and_usage.csv or a CLI argument — data
+    this engine has to treat as untrusted, since a real collector would be
+    reflecting whatever tags/names exist in someone's AWS account. Two
+    concrete failure modes without this: a `|` in a resource tag silently
+    corrupts the Markdown table it's rendered into, and raw `<script>`/HTML
+    would pass through unescaped straight into any future renderer that
+    turns this Markdown into HTML (the roadmap's web dashboard) — a stored
+    XSS waiting to happen. Escaping at the render boundary, not at the
+    source, keeps every caller safe by default.
+    """
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("|", "\\|")
+        .replace("`", "\\`")
+    )
+
+
 def render_markdown(report: Report) -> str:
     lines: list[str] = []
     w = lines.append
 
     w(f"# GreenPilot AI — Cloud Assessment Report\n")
-    w(f"**Company:** {report.company_name}  ")
+    w(f"**Company:** {_escape_md(report.company_name)}  ")
     w(f"**Generated:** {report.generated_on.isoformat()}  ")
     w(f"**Resources analyzed:** {report.resources_analyzed}  ")
     w(f"**Findings flagged:** {len(report.findings)}\n")
@@ -48,18 +74,18 @@ def render_markdown(report: Report) -> str:
             else f.monthly_savings
         )
         w(
-            f"| {f.resource_id} | {f.service} | {f.title} | "
+            f"| {_escape_md(f.resource_id)} | {f.service} | {_escape_md(f.title)} | "
             f"€{current_cost:,.2f} | €{f.monthly_savings:,.2f} | {f.effort} |"
         )
     w("")
 
     w("## Prioritized Action Plan\n")
     for i, f in enumerate(report.action_plan, start=1):
-        w(f"{i}. **{f.title}** ({f.resource_id}) — save ~€{f.monthly_savings:,.2f}/mo, "
-          f"effort: {f.effort}")
-        w(f"   - {f.description}")
+        w(f"{i}. **{_escape_md(f.title)}** ({_escape_md(f.resource_id)}) — "
+          f"save ~€{f.monthly_savings:,.2f}/mo, effort: {f.effort}")
+        w(f"   - {_escape_md(f.description)}")
         if f.rollback:
-            w(f"   - Rollback: {f.rollback}")
+            w(f"   - Rollback: {_escape_md(f.rollback)}")
     w("")
 
     w("## Carbon Impact Estimate\n")
@@ -77,7 +103,10 @@ def render_markdown(report: Report) -> str:
             continue
         w(f"### {label}\n")
         for f in notes:
-            w(f"- **{f.title}** ({f.resource_id}): {f.description}")
+            w(
+                f"- **{_escape_md(f.title)}** ({_escape_md(f.resource_id)}): "
+                f"{_escape_md(f.description)}"
+            )
         w("")
 
     w(

@@ -160,6 +160,8 @@ def rule_schedulable_ec2(resources: list[Resource]) -> list[Finding]:
         if r.service != "EC2" or not r.schedulable:
             continue
         hours = r.hours_running_per_month or HOURS_PER_MONTH_ALWAYS_ON
+        if hours <= 0:
+            continue  # nothing running, nothing to schedule/save
         ratio = max(0.0, (hours - HOURS_PER_MONTH_BUSINESS_ONLY) / hours)
         savings = round(r.monthly_cost * ratio, 2)
         findings.append(

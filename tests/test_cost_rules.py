@@ -123,6 +123,24 @@ def test_frequently_accessed_s3_is_not_flagged():
     assert rule_misclassified_s3([r]) == []
 
 
+def test_schedulable_ec2_with_negative_hours_is_skipped_not_miscalculated():
+    # rule_schedulable_ec2 is a pure function callable directly by anyone,
+    # not just through engine.load_resources (which separately rejects
+    # negative hours before rules ever run). Called standalone with bad
+    # data, it must not turn a negative denominator into a wildly inflated
+    # bogus savings figure -- it should just skip the resource.
+    r = Resource(
+        resource_id="ec2-bad-data",
+        service="EC2",
+        resource_type="t3.large",
+        region="eu-west-1",
+        monthly_cost=180.0,
+        hours_running_per_month=-5,
+        schedulable=True,
+    )
+    assert rule_schedulable_ec2([r]) == []
+
+
 def test_schedulable_ec2_savings_matches_business_hours_ratio():
     r = Resource(
         resource_id="ec2-dev",

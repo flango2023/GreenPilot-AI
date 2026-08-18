@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/flango2023/GreenPilot-AI/actions/workflows/ci.yml"><img src="https://github.com/flango2023/GreenPilot-AI/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/flango2023/GreenPilot-AI/actions/workflows/codeql.yml"><img src="https://github.com/flango2023/GreenPilot-AI/actions/workflows/codeql.yml/badge.svg" alt="CodeQL status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-34D399.svg" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-10B981.svg" alt="Python 3.9+">
   <a href="https://greenpilotai.com"><img src="https://img.shields.io/badge/product-greenpilotai.com-047857.svg" alt="Live product"></a>
@@ -74,6 +75,16 @@ No framework dependencies for v1 — pure standard library (`argparse`, `datacla
 pytest -q
 ```
 
+## Security
+
+This is a local, offline tool — no network calls, no AWS API calls, no secrets, synthetic data only. That said, it's still built the way the real product's read-only, least-privilege access model demands:
+
+- **[`iam/read-only-collector-policy.json`](iam/read-only-collector-policy.json)** — a concrete least-privilege IAM policy (Get/List/Describe only, plus an explicit `Deny` guardrail on destructive actions) scoped to exactly what a real collector would need, matching the access model on [greenpilotai.com/security.html](https://greenpilotai.com/security.html). Its shape is enforced by `tests/test_iam_policy.py`.
+- **Untrusted-input handling** — `engine.load_resources` rejects negative costs/hours outright, and `report.py` escapes every resource-derived field before it goes into the Markdown report (a `|` in a tag can't corrupt the findings table; a `<script>` can't pass through unescaped to a future HTML dashboard). See `tests/test_report_escaping.py` and `tests/test_engine_validation.py`.
+- **CodeQL** + **Dependabot** run on every push (see badges above).
+
+Full write-up: [docs/security.md](docs/security.md). Found an issue? See [SECURITY.md](SECURITY.md).
+
 ## About the live product
 
 GreenPilot AI's production architecture (in progress) is a read-only cloud data collector → this rule-based optimization engine → a web dashboard → an approval-based action workflow, where every optimization requires explicit customer sign-off before anything executes. See:
@@ -91,6 +102,7 @@ Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimizati
 - [x] Carbon estimate — implemented and tested
 - [x] GDPR / NIS2 / CSRD governance observations — implemented and tested
 - [x] CI (GitHub Actions, pytest on every push)
+- [x] Least-privilege IAM policy + input validation + output escaping + CodeQL + Dependabot
 - [ ] Screenshots of the live site in `docs/screenshots/`
 - [ ] Brand demo video (currently a separate Remotion project, not yet in this repo)
 - [ ] Real AWS Cost Explorer / describe-* data collector (currently: sample data only)
