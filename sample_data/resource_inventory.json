@@ -1,0 +1,154 @@
+[
+  {
+    "resource_id": "ec2-web-01",
+    "service": "EC2",
+    "resource_type": "m5.xlarge",
+    "region": "eu-west-1",
+    "tags": {"env": "prod", "team": "web"},
+    "avg_cpu_utilization_pct": 3.2,
+    "hours_running_per_month": 730,
+    "schedulable": false
+  },
+  {
+    "resource_id": "ec2-batch-02",
+    "service": "EC2",
+    "resource_type": "c5.2xlarge",
+    "region": "eu-central-1",
+    "tags": {"env": "prod", "team": "data"},
+    "avg_cpu_utilization_pct": 14.5,
+    "hours_running_per_month": 730,
+    "schedulable": false
+  },
+  {
+    "resource_id": "ec2-dev-04",
+    "service": "EC2",
+    "resource_type": "t3.large",
+    "region": "eu-west-1",
+    "tags": {"env": "dev", "team": "web"},
+    "avg_cpu_utilization_pct": 38.0,
+    "hours_running_per_month": 730,
+    "schedulable": true
+  },
+  {
+    "resource_id": "ec2-staging-05",
+    "service": "EC2",
+    "resource_type": "t3.large",
+    "region": "eu-west-1",
+    "tags": {"env": "staging", "team": "web"},
+    "avg_cpu_utilization_pct": 41.0,
+    "hours_running_per_month": 730,
+    "schedulable": true
+  },
+  {
+    "resource_id": "ec2-app-03",
+    "service": "EC2",
+    "resource_type": "m5.large",
+    "region": "eu-west-1",
+    "tags": {"env": "prod", "team": "web"},
+    "avg_cpu_utilization_pct": 55.0,
+    "hours_running_per_month": 730,
+    "schedulable": false
+  },
+  {
+    "resource_id": "ec2-api-06",
+    "service": "EC2",
+    "resource_type": "c5.xlarge",
+    "region": "eu-west-1",
+    "tags": {"env": "prod", "team": "platform"},
+    "avg_cpu_utilization_pct": 42.0,
+    "hours_running_per_month": 730,
+    "schedulable": false,
+    "publicly_accessible": true,
+    "encrypted": true
+  },
+  {
+    "resource_id": "rds-primary-01",
+    "service": "RDS",
+    "resource_type": "db.m5.large",
+    "region": "eu-west-1",
+    "tags": {"env": "prod", "role": "primary"},
+    "multi_az": true,
+    "is_redundant_replica": false,
+    "encrypted": true
+  },
+  {
+    "resource_id": "rds-replica-02",
+    "service": "RDS",
+    "resource_type": "db.m5.large",
+    "region": "eu-west-1",
+    "tags": {"env": "prod", "role": "read-replica"},
+    "multi_az": false,
+    "is_redundant_replica": true,
+    "encrypted": true
+  },
+  {
+    "resource_id": "rds-analytics-03",
+    "service": "RDS",
+    "resource_type": "db.r5.large",
+    "region": "eu-central-1",
+    "tags": {"env": "prod", "role": "analytics"},
+    "multi_az": false,
+    "is_redundant_replica": false,
+    "encrypted": false
+  },
+  {
+    "resource_id": "ebs-vol-01",
+    "service": "EBS",
+    "resource_type": "gp3",
+    "region": "eu-west-1",
+    "tags": {"env": "prod"},
+    "attached": true,
+    "storage_gb": 100
+  },
+  {
+    "resource_id": "ebs-vol-02",
+    "service": "EBS",
+    "resource_type": "gp3",
+    "region": "eu-west-1",
+    "tags": {"env": "prod"},
+    "attached": false,
+    "storage_gb": 250
+  },
+  {
+    "resource_id": "ebs-vol-03",
+    "service": "EBS",
+    "resource_type": "gp3",
+    "region": "eu-central-1",
+    "tags": {"env": "staging"},
+    "attached": false,
+    "storage_gb": 60
+  },
+  {
+    "resource_id": "s3-logs-archive",
+    "service": "S3",
+    "resource_type": "STANDARD bucket",
+    "region": "eu-west-1",
+    "tags": {"purpose": "logs"},
+    "storage_class": "STANDARD",
+    "access_frequency": "rare",
+    "storage_gb": 3000
+  },
+  {
+    "resource_id": "s3-backups",
+    "service": "S3",
+    "resource_type": "STANDARD bucket",
+    "region": "eu-central-1",
+    "tags": {"purpose": "backups"},
+    "storage_class": "STANDARD",
+    "access_frequency": "infrequent",
+    "storage_gb": 900
+  },
+  {
+    "resource_id": "s3-active-assets",
+    "service": "S3",
+    "resource_type": "STANDARD bucket",
+    "region": "us-east-1",
+    "tags": {"purpose": "user-uploads"},
+    "storage_class": "STANDARD",
+    "access_frequency": "frequent",
+    "storage_gb": 500,
+    "publicly_accessible": true,
+    "encrypted": true,
+    "contains_personal_data": true
+  }
+]

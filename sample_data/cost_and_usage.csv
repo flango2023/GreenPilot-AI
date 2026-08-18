@@ -1,0 +1,16 @@
+resource_id,service,region,monthly_cost
+ec2-web-01,EC2,eu-west-1,420.00
+ec2-batch-02,EC2,eu-central-1,640.00
+ec2-dev-04,EC2,eu-west-1,180.00
+ec2-staging-05,EC2,eu-west-1,175.00
+ec2-app-03,EC2,eu-west-1,210.00
+ec2-api-06,EC2,eu-west-1,260.00
+rds-primary-01,RDS,eu-west-1,380.00
+rds-replica-02,RDS,eu-west-1,310.00
+rds-analytics-03,RDS,eu-central-1,340.00
+ebs-vol-01,EBS,eu-west-1,12.00
+ebs-vol-02,EBS,eu-west-1,38.00
+ebs-vol-03,EBS,eu-central-1,15.00
+s3-logs-archive,S3,eu-west-1,95.00
+s3-backups,S3,eu-central-1,72.00
+s3-active-assets,S3,us-east-1,140.00

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-labelledby="title desc">
+  <title id="title">GreenPilot AI</title>
+  <desc id="desc">AWS cost, carbon, and governance assessment engine</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06140F"/>
+      <stop offset="1" stop-color="#0A1F17"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="1.15" r="0.9">
+      <stop offset="0" stop-color="#047857" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#047857" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="1.4" cy="1.4" r="1.4" fill="#F8FAFC" opacity="0.06"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect width="1200" height="300" fill="url(#dots)"/>
+  <rect width="1200" height="300" fill="url(#glow)"/>
+
+  <!-- Logo mark: leaf + orbit, in the GreenPilot palette -->
+  <g transform="translate(90,150)">
+    <circle r="54" fill="none" stroke="#34D399" stroke-opacity="0.35" stroke-width="1.5"/>
+    <path d="M -30 26 C -30 -22 14 -46 46 -40 C 40 -8 16 30 -30 26 Z" fill="url(#mark)"/>
+    <path d="M -28 24 C -6 4 18 -18 42 -36" fill="none" stroke="#06140F" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">
+    <text x="180" y="140" font-size="56" fill="#F8FAFC">GreenPilot<tspan fill="#10B981"> AI</tspan></text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="182" y="178" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#F8FAFC" opacity="0.72">
+    Cost &#183; Carbon &#183; Governance for AWS
+  </text>
+
+  <!-- Trust line -->
+  <text x="182" y="212" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="0.5" fill="#34D399" opacity="0.85">
+    READ-ONLY &#183; APPROVAL-BASED &#183; EU-FIRST
+  </text>
+
+  <text x="1110" y="270" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#F8FAFC" opacity="0.5">
+    greenpilotai.com
+  </text>
+</svg>
