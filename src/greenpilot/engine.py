@@ -26,7 +26,7 @@ _RESOURCE_FIELD_NAMES = {f.name for f in fields(Resource)}
 
 def load_resources(data_dir: Path) -> list[Resource]:
     """Join cost_and_usage.csv (billing) with resource_inventory.json
-    (config/utilization) on resource_id — the same two-source shape a real
+    (config/utilization) on resource_id: the same two-source shape a real
     read-only AWS collector would use (Cost Explorer/CUR + describe-* calls)."""
     data_dir = Path(data_dir)
 
@@ -56,7 +56,7 @@ def load_resources(data_dir: Path) -> list[Resource]:
             # inflated "savings" figure instead of failing loudly.
             raise ValueError(
                 f"{resource_id} has a negative monthly_cost ({cost}) in "
-                "cost_and_usage.csv — refusing to analyze untrusted/malformed data."
+                "cost_and_usage.csv. Refusing to analyze untrusted/malformed data."
             )
         hours = item.get("hours_running_per_month")
         if hours is not None and hours < 0:

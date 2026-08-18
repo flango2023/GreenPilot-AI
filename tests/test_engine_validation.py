@@ -1,7 +1,7 @@
 """Malformed/adversarial input handling for engine.load_resources.
 
 cost_and_usage.csv and resource_inventory.json are the two files a real
-collector would populate from live AWS data — this engine has to fail
+collector would populate from live AWS data. This engine has to fail
 loudly on nonsensical values instead of quietly producing a wrong report.
 """
 

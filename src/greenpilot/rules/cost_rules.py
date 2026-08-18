@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from ..models import Finding, Resource
 
-# Thresholds are deliberately simple and documented — this is a rule-based
-# v1 engine (matching the live product's current architecture); ML-based
+# Thresholds are deliberately simple and documented. This is a rule-based
+# v1 engine, matching the live product's current architecture; ML-based
 # scoring is explicitly a roadmap item, not something to fake here.
 IDLE_CPU_THRESHOLD_PCT = 5.0
 UNDERUTILIZED_CPU_THRESHOLD_PCT = 20.0

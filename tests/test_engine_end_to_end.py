@@ -29,7 +29,7 @@ def test_report_renders_to_markdown_with_expected_sections():
     report = analyze(SAMPLE_DATA, company_name="Acme Tech Solutions GmbH")
     markdown = render_markdown(report)
 
-    assert "# GreenPilot AI — Cloud Assessment Report" in markdown
+    assert "# GreenPilot AI Cloud Assessment Report" in markdown
     assert "Acme Tech Solutions GmbH" in markdown
     assert "## Executive Summary" in markdown
     assert "## Cloud Waste Findings" in markdown

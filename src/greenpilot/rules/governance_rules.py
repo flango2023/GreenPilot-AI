@@ -1,11 +1,11 @@
-"""EU governance observations — GDPR data residency, NIS2 security posture,
+"""EU governance observations: GDPR data residency, NIS2 security posture,
 and CSRD emissions-reporting relevance, matching the three subsections on
 https://greenpilotai.com/sample-report.html.
 
-These are deliberately framed as *observations*, not compliance verdicts —
-the live product is explicit that it "flags configurations relevant to"
-these regulations without replacing legal counsel, and this engine keeps
-the same framing.
+These are deliberately framed as observations, not compliance verdicts. The
+live product is explicit that it "flags configurations relevant to" these
+regulations without replacing legal counsel, and this engine keeps the
+same framing.
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ def rule_nis2_security_posture(resources: list[Resource]) -> list[Finding]:
                     category="governance",
                     title="Storage not encrypted at rest",
                     description=(
-                        f"{r.resource_id} has no encryption at rest configured — a common "
+                        f"{r.resource_id} has no encryption at rest configured, a common "
                         "baseline control referenced under NIS2 risk-management measures."
                     ),
                     effort="low",

@@ -2,19 +2,20 @@
 
 ## Reporting a vulnerability
 
-If you find a security issue in this repository or believe it reflects a security issue in the live GreenPilot AI product, please email **info@greenpilotai.com** with the subject line **"Security concern — GreenPilot AI"**, including:
+If you find a security issue in this repository, or believe it reflects a security issue in the live GreenPilot AI product, email **info@greenpilotai.com** with the subject line **"Security concern - GreenPilot AI"**, including:
 
 - A description of the issue and its potential impact
-- Steps to reproduce (if applicable)
-- Any relevant logs, screenshots, or PoC code
+- Steps to reproduce, if applicable
+- Any relevant logs, screenshots, or proof-of-concept code
 
-You'll get an acknowledgment within **5 business days**. Credible reports are investigated in good faith. Please do not open a public GitHub issue for anything you believe is a security vulnerability — email first.
+You will get an acknowledgment within 5 business days. Credible reports are investigated in good faith. Please do not open a public GitHub issue for anything you believe is a security vulnerability; email first.
 
 ## Scope
 
 This repository ships:
-- A local, offline Python rule engine (no network calls, no AWS API calls)
-- Synthetic sample data only — never real customer or AWS account data
+
+- A local, offline Python rule engine, with no network calls and no AWS API calls
+- Synthetic sample data only, never real customer or AWS account data
 - No secrets, credentials, or API keys anywhere in the codebase or history
 
 For the security model of the live product this repo supports (IAM access model, data handling, third-party services, current certification status), see [docs/security.md](docs/security.md) and the live [greenpilotai.com/security.html](https://greenpilotai.com/security.html).

@@ -1,6 +1,6 @@
 """Structural checks on iam/read-only-collector-policy.json.
 
-This isn't a full IAM policy simulator — just a guardrail so the one
+This isn't a full IAM policy simulator, just a guardrail so the one
 security artifact in this repo that claims to be "least privilege" can't
 silently regress into something broader without a test failing.
 """

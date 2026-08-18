@@ -1,7 +1,7 @@
 """Untrusted-data handling in the report renderer.
 
 resource_inventory.json / cost_and_usage.csv model what a real AWS
-collector would read out of someone's account — tags, instance types,
+collector would read out of someone's account: tags, instance types,
 regions. This engine doesn't get to assume that data is clean.
 """
 

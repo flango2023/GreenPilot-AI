@@ -21,15 +21,15 @@ def _escape_md(value: str) -> str:
 
     Every field rendered below (resource IDs, titles, descriptions,
     rollback notes, company name) ultimately traces back to
-    resource_inventory.json / cost_and_usage.csv or a CLI argument — data
-    this engine has to treat as untrusted, since a real collector would be
-    reflecting whatever tags/names exist in someone's AWS account. Two
-    concrete failure modes without this: a `|` in a resource tag silently
-    corrupts the Markdown table it's rendered into, and raw `<script>`/HTML
-    would pass through unescaped straight into any future renderer that
-    turns this Markdown into HTML (the roadmap's web dashboard) — a stored
-    XSS waiting to happen. Escaping at the render boundary, not at the
-    source, keeps every caller safe by default.
+    resource_inventory.json / cost_and_usage.csv or a CLI argument. This
+    engine has to treat that as untrusted, since a real collector would be
+    reflecting whatever tags and names exist in someone's AWS account. Two
+    concrete failure modes without this escaping: a `|` in a resource tag
+    silently corrupts the Markdown table it's rendered into, and raw
+    `<script>`/HTML would pass through unescaped into any future renderer
+    that turns this Markdown into HTML, i.e. the roadmap's web dashboard.
+    Escaping at the render boundary, not at the source, keeps every caller
+    safe by default.
     """
     return (
         str(value)
@@ -45,7 +45,7 @@ def render_markdown(report: Report) -> str:
     lines: list[str] = []
     w = lines.append
 
-    w(f"# GreenPilot AI — Cloud Assessment Report\n")
+    w(f"# GreenPilot AI Cloud Assessment Report\n")
     w(f"**Company:** {_escape_md(report.company_name)}  ")
     w(f"**Generated:** {report.generated_on.isoformat()}  ")
     w(f"**Resources analyzed:** {report.resources_analyzed}  ")
@@ -81,7 +81,7 @@ def render_markdown(report: Report) -> str:
 
     w("## Prioritized Action Plan\n")
     for i, f in enumerate(report.action_plan, start=1):
-        w(f"{i}. **{_escape_md(f.title)}** ({_escape_md(f.resource_id)}) — "
+        w(f"{i}. **{_escape_md(f.title)}** ({_escape_md(f.resource_id)}): "
           f"save ~€{f.monthly_savings:,.2f}/mo, effort: {f.effort}")
         w(f"   - {_escape_md(f.description)}")
         if f.rollback:
@@ -111,7 +111,7 @@ def render_markdown(report: Report) -> str:
 
     w(
         "---\n*This is a demo report generated from synthetic sample data by the "
-        "open-source engine in this repository — see [sample_data/](../sample_data) "
+        "open-source engine in this repository. See [sample_data/](../sample_data) "
         "and [docs/carbon-methodology.md](../docs/carbon-methodology.md). It mirrors "
         "the report structure at [greenpilotai.com/sample-report.html]"
         "(https://greenpilotai.com/sample-report.html); figures here are illustrative, "

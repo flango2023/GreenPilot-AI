@@ -18,7 +18,7 @@ class Resource:
 
     This mirrors what a real GreenPilot collector would read from a
     read-only AWS API call (Cost Explorer + describe-instances/volumes/
-    db-instances/buckets) — flattened here into one record per resource so
+    db-instances/buckets), flattened here into one record per resource so
     sample data stays easy to read and edit.
     """
 
@@ -73,8 +73,8 @@ class CarbonEstimate:
     current_tonnes_co2e_per_year: float
     reduction_tonnes_co2e_per_year: float
     methodology_note: str = (
-        "Indicative only — instance specs and annual grid averages used as "
-        "proxies for metered energy use. See docs/carbon-methodology.md."
+        "Indicative only: instance specs and annual grid averages are used "
+        "as proxies for metered energy use. See docs/carbon-methodology.md."
     )
 
 
@@ -104,8 +104,8 @@ class Report:
 
     @property
     def action_plan(self) -> list[Finding]:
-        """Cost findings ranked by savings desc, then effort asc — mirrors the
-        live product's "ranked by estimated savings and effort" promise."""
+        """Cost findings ranked by savings desc, then effort asc. Mirrors the
+        live product's "ranked by savings potential and effort" description."""
         effort_rank = {"low": 0, "medium": 1, "high": 2}
         return sorted(
             self.cost_findings,

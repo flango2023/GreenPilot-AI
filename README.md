@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="GreenPilot AI — Cost · Carbon · Governance for AWS" width="100%" />
+  <img src="docs/banner.svg" alt="GreenPilot AI: Cost, Carbon, and Governance for AWS" width="100%" />
 </p>
 
 <p align="center">
@@ -10,9 +10,17 @@
   <a href="https://greenpilotai.com"><img src="https://img.shields.io/badge/product-greenpilotai.com-047857.svg" alt="Live product"></a>
 </p>
 
-European SMEs running AWS usually don't have a dedicated FinOps team — so cloud waste, carbon footprint, and EU compliance exposure (GDPR / NIS2 / CSRD) go unmanaged. **GreenPilot AI** is a pilot-stage assessment product that reads AWS billing and configuration data (read-only, no changes without explicit sign-off) and turns it into a ranked, actionable report.
+[**GreenPilot AI**](https://greenpilotai.com) is a pilot-stage product for European SMEs running AWS: read-only cost, carbon, and governance assessment, with every optimization requiring explicit approval before it runs. Most AWS environments waste 25-35% of spend on idle or over-provisioned resources, and most SMEs don't have a dedicated FinOps team to find it.
 
-This repository is the **open-source engine behind that report**: a small, fully-tested Python rule engine you can run right now, on the sample data in this repo, to produce the exact kind of report the live product generates.
+This repository is the open-source rule engine behind that assessment. It is not the full product (no dashboard, no live AWS connection, no ML scoring), but it is real, tested code that reproduces the report the live product generates, using the exact rules described on the site.
+
+<p align="center">
+  <img src="docs/screenshots/hero.png" alt="GreenPilot AI homepage: AWS optimization for European SMEs, with approval before every change." width="100%" />
+</p>
+
+## Run it
+
+No AWS account, no credentials, no network calls. Just the engine, against the sample data committed in this repo.
 
 ```bash
 git clone https://github.com/flango2023/GreenPilot-AI.git
@@ -23,23 +31,27 @@ pip install -e ".[dev]"
 python -m greenpilot analyze sample_data --company "Acme Tech Solutions GmbH"
 ```
 
-That's it — no AWS account, no credentials, no network calls. A ready-made example of the output is committed at **[reports/sample_report.md](reports/sample_report.md)**.
+A pre-generated copy of the output is committed at [reports/sample_report.md](reports/sample_report.md).
 
-## What it actually finds
+## What it checks
 
-Five rule-based checks, each mapped to a real AWS cost-waste pattern:
+Five rule-based checks, each matching a waste pattern the live product's Sample Report describes:
 
 | Check | What it catches |
 |---|---|
-| Idle / underutilized EC2 | Instances running well below CPU capacity — flagged for termination or downsizing |
+| Idle / underutilized EC2 | Instances running well below CPU capacity, flagged for termination or downsizing |
 | Unattached EBS volumes | Storage paying full price with nothing attached to it |
-| Redundant RDS configuration | Duplicated read replicas / overlapping Multi-AZ setups |
-| Misclassified S3 storage tier | STANDARD storage with infrequent/rare access patterns that belongs in IA or Glacier |
+| Redundant RDS configuration | Duplicated read replicas or overlapping Multi-AZ setups |
+| Misclassified S3 storage tier | STANDARD storage with infrequent or rare access that belongs in IA or Glacier |
 | Schedulable EC2 workloads | Dev/staging instances running 24/7 that only need business hours |
 
-Plus a **carbon estimate** (`kWh-equivalent usage × regional grid intensity`, see [docs/carbon-methodology.md](docs/carbon-methodology.md)) and **EU governance observations** for GDPR data residency, NIS2 security posture, and CSRD emissions-reporting relevance — the same three regulations the live product's Sample Report covers.
+Plus a carbon estimate (`kWh-equivalent usage × regional grid intensity`, see [docs/carbon-methodology.md](docs/carbon-methodology.md)) and EU governance observations for GDPR data residency, NIS2 security posture, and CSRD emissions-reporting relevance.
 
-Every finding carries an estimated saving, an effort level, and a rollback note — nothing here just says "delete this," it says how to undo it too.
+Every finding includes an estimated saving, an effort level, and a rollback note. The live product's own framing:
+
+<p align="center">
+  <img src="docs/screenshots/platform-features.png" alt="GreenPilot AI platform: Cost Optimization, Carbon-Aware Insights, EU Governance Support, Approval-Based Automation" width="100%" />
+</p>
 
 ## How it's built
 
@@ -49,27 +61,31 @@ flowchart LR
     B --> C[cost_rules.py]
     B --> D[carbon.py]
     B --> E[governance_rules.py]
-    C --> F[engine.analyze → Report]
+    C --> F[engine.analyze: assemble Report]
     D --> F
     E --> F
-    F --> G[report.py → Markdown]
+    F --> G[report.py: render Markdown]
 ```
 
-Full write-up: [docs/architecture.md](docs/architecture.md).
+Full write-up, including how this maps to the live product's five-stage flow (Connect, Scan, Report, Review & Approve, Execute): [docs/architecture.md](docs/architecture.md).
+
+<p align="center">
+  <img src="docs/screenshots/how-it-works.png" alt="GreenPilot AI process: Connect AWS Securely, Define Your Goals, Review Recommendations, Approve and Monitor" width="100%" />
+</p>
 
 ```
 src/greenpilot/
 ├── models.py               # Resource, Finding, CarbonEstimate, Report
 ├── rules/
-│   ├── cost_rules.py        # the 5 waste checks above
-│   ├── carbon.py             # CO2e formula
-│   └── governance_rules.py   # GDPR / NIS2 / CSRD observations
+│   ├── cost_rules.py       # the 5 waste checks above
+│   ├── carbon.py           # CO2e formula
+│   └── governance_rules.py # GDPR, NIS2, CSRD observations
 ├── engine.py                # load data, run every rule, assemble a Report
-├── report.py                 # Report → Markdown
+├── report.py                 # Report -> Markdown
 └── cli.py                    # `greenpilot analyze <data_dir>`
 ```
 
-No framework dependencies for v1 — pure standard library (`argparse`, `dataclasses`, `csv`, `json`), so `pip install -e .` and running it just works. 23 tests cover every rule in isolation plus a full end-to-end run; CI runs them on every push against Python 3.10 and 3.12.
+No framework dependencies for v1: standard library only (`argparse`, `dataclasses`, `csv`, `json`), so `pip install -e .` and running it just works. 34 tests cover every rule in isolation, the engine end-to-end, input validation, and output escaping. CI runs them on every push against Python 3.10 and 3.12.
 
 ```bash
 pytest -q
@@ -77,35 +93,48 @@ pytest -q
 
 ## Security
 
-This is a local, offline tool — no network calls, no AWS API calls, no secrets, synthetic data only. That said, it's still built the way the real product's read-only, least-privilege access model demands:
+This is a local, offline tool: no network calls, no AWS API calls, no secrets, synthetic sample data only. It is still built the way the live product's read-only, least-privilege access model requires:
 
-- **[`iam/read-only-collector-policy.json`](iam/read-only-collector-policy.json)** — a concrete least-privilege IAM policy (Get/List/Describe only, plus an explicit `Deny` guardrail on destructive actions) scoped to exactly what a real collector would need, matching the access model on [greenpilotai.com/security.html](https://greenpilotai.com/security.html). Its shape is enforced by `tests/test_iam_policy.py`.
-- **Untrusted-input handling** — `engine.load_resources` rejects negative costs/hours outright, and `report.py` escapes every resource-derived field before it goes into the Markdown report (a `|` in a tag can't corrupt the findings table; a `<script>` can't pass through unescaped to a future HTML dashboard). See `tests/test_report_escaping.py` and `tests/test_engine_validation.py`.
-- **CodeQL** + **Dependabot** run on every push (see badges above).
+- [`iam/read-only-collector-policy.json`](iam/read-only-collector-policy.json): a least-privilege IAM policy (Get/List/Describe only, plus an explicit `Deny` guardrail on destructive actions), scoped to what a real collector would need, matching the access model on [greenpilotai.com/security.html](https://greenpilotai.com/security.html). Its shape is checked by `tests/test_iam_policy.py`.
+- Input validation: `engine.load_resources` rejects negative costs and negative hours instead of letting them produce a wrong report. See `tests/test_engine_validation.py`.
+- Output escaping: `report.py` escapes every resource-derived field before it goes into the Markdown report, so a `|` in a tag can't corrupt the findings table and a `<script>` tag can't reach a future HTML-rendering dashboard unescaped. See `tests/test_report_escaping.py`.
+- CodeQL and Dependabot run on every push (badges above).
 
-Full write-up: [docs/security.md](docs/security.md). Found an issue? See [SECURITY.md](SECURITY.md).
+Full write-up: [docs/security.md](docs/security.md). To report an issue: [SECURITY.md](SECURITY.md).
 
 ## About the live product
 
-GreenPilot AI's production architecture (in progress) is a read-only cloud data collector → this rule-based optimization engine → a web dashboard → an approval-based action workflow, where every optimization requires explicit customer sign-off before anything executes. See:
+<p align="center">
+  <img src="docs/screenshots/challenges.png" alt="The problem GreenPilot AI addresses: rising cloud bills, no dedicated team, limited emissions visibility, recommendations without action" width="100%" />
+</p>
 
-- **[greenpilotai.com](https://greenpilotai.com)** — the live pilot program
-- **[Sample Report](https://greenpilotai.com/sample-report.html)** — the product's own worked example, which this repo's rule engine reproduces the structure of
-- **[Carbon Methodology](https://greenpilotai.com/carbon-methodology.html)** — the live methodology this repo's `carbon.py` implements
-- **[LinkedIn](https://www.linkedin.com/company/greenpilotai/)**
+The live product's process, in five stages: **Connect** (read-only AWS access) -> **Scan** (usage, cost, and configuration data) -> **Report** (ranked findings) -> **Review & Approve** (each recommendation individually) -> **Execute** (only what was approved).
 
-Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimization scoring, a web dashboard, audit logging) are explicitly **not** implemented here — this repo is the honest, runnable core: the rule engine, not the full SaaS product.
+The pilot program starts with a free read-only assessment. Paid optimization support begins only after the report has been reviewed and the scope agreed, typically across a 30-day evaluation window. No production changes run without explicit approval.
 
-## Status & next steps
+From the site's About page:
 
-- [x] Rule-based cost engine (EC2, RDS, EBS, S3) — implemented and tested
-- [x] Carbon estimate — implemented and tested
-- [x] GDPR / NIS2 / CSRD governance observations — implemented and tested
+> Richard Schmitz is building GreenPilot AI from Lisbon. His background is in AI and machine learning. GreenPilot started from a direct problem: European SMEs running AWS don't have the tooling to manage cloud cost, carbon, and governance without an enterprise-scale team.
+
+Links:
+
+- [greenpilotai.com](https://greenpilotai.com): the live pilot program
+- [Sample Report](https://greenpilotai.com/sample-report.html): the product's own worked example, which this repo's rule engine reproduces the structure of
+- [Carbon Methodology](https://greenpilotai.com/carbon-methodology.html): the live methodology `carbon.py` implements
+- [LinkedIn](https://www.linkedin.com/company/greenpilotai/)
+
+Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimization scoring, a web dashboard, audit logging, RBAC) are not implemented here. This repo is the rule engine: real and runnable, not the full SaaS product.
+
+## Status
+
+- [x] Rule-based cost engine (EC2, RDS, EBS, S3)
+- [x] Carbon estimate
+- [x] GDPR / NIS2 / CSRD governance observations
 - [x] CI (GitHub Actions, pytest on every push)
-- [x] Least-privilege IAM policy + input validation + output escaping + CodeQL + Dependabot
-- [ ] Screenshots of the live site in `docs/screenshots/`
+- [x] Least-privilege IAM policy, input validation, output escaping, CodeQL, Dependabot
+- [x] Screenshots of the live site in `docs/screenshots/`
 - [ ] Brand demo video (currently a separate Remotion project, not yet in this repo)
-- [ ] Real AWS Cost Explorer / describe-* data collector (currently: sample data only)
+- [ ] Real AWS Cost Explorer / describe-* data collector (currently sample data only)
 
 ## License
 

@@ -14,7 +14,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="greenpilot",
         description=(
-            "GreenPilot AI assessment engine — reads AWS billing + resource "
+            "GreenPilot AI assessment engine. Reads AWS billing and resource "
             "data and produces a cost/carbon/governance report."
         ),
     )

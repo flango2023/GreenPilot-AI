@@ -1,14 +1,14 @@
-"""Carbon estimation — implements the formula published at
+"""Carbon estimation. Implements the formula published at
 https://greenpilotai.com/carbon-methodology.html:
 
     Estimated CO2e = Resource Usage (kWh equivalent) x Regional Grid Intensity (gCO2e/kWh)
 
-Like the live methodology page, this is explicitly an *illustrative* model:
+Like the live methodology page, this is explicitly an illustrative model.
 AWS doesn't expose metered per-resource power draw, so instance-type power
-figures and annual-average regional grid intensities are used as proxies —
+figures and annual-average regional grid intensities are used as proxies,
 the same simplifying assumptions the live site documents. Do not use these
-numbers for regulatory/CSRD reporting. See docs/carbon-methodology.md for
-the full write-up and sources (IEA World Energy Outlook, EMBER European
+numbers for regulatory or CSRD reporting. See docs/carbon-methodology.md
+for the full write-up and sources (IEA World Energy Outlook, EMBER European
 Electricity Review, European Environment Agency).
 """
 
@@ -19,7 +19,7 @@ from ..models import CarbonEstimate, Finding, Resource
 HOURS_PER_MONTH_ALWAYS_ON = 730.0
 
 # Rough average power draw per EC2/RDS instance family, in watts. Deliberately
-# coarse — a handful of buckets, not a per-instance-type lookup table.
+# coarse: a handful of buckets, not a per-instance-type lookup table.
 INSTANCE_FAMILY_AVG_WATTS: dict[str, float] = {
     "t3": 15.0,
     "t3a": 15.0,
@@ -39,14 +39,14 @@ DEFAULT_INSTANCE_WATTS = 30.0
 STORAGE_WATTS_PER_TB = 1.2
 
 # Illustrative annual-average grid carbon intensity by AWS region, gCO2e/kWh.
-# Ballpark figures only (in the spirit of IEA/EMBER/EEA public reporting) —
-# see docs/carbon-methodology.md for the caveat.
+# Ballpark figures only, in the spirit of IEA/EMBER/EEA public reporting.
+# See docs/carbon-methodology.md for the caveat.
 REGION_GRID_INTENSITY_G_PER_KWH: dict[str, float] = {
     "eu-west-1": 316,  # Ireland
     "eu-west-2": 231,  # London
-    "eu-west-3": 58,  # Paris — nuclear-heavy grid
+    "eu-west-3": 58,  # Paris, nuclear-heavy grid
     "eu-central-1": 380,  # Frankfurt
-    "eu-north-1": 21,  # Stockholm — hydro/nuclear
+    "eu-north-1": 21,  # Stockholm, hydro/nuclear
     "us-east-1": 367,  # N. Virginia
     "us-west-2": 92,  # Oregon
 }
@@ -96,9 +96,9 @@ def estimate_reduction_potential_tonnes_per_year(
     resources: list[Resource], findings: list[Finding]
 ) -> float:
     """Assumes carbon scales with the cost-savings ratio per flagged
-    resource — a reasonable proxy, since removing/downsizing/rescheduling
-    compute reduces energy draw roughly in proportion to the compute (and
-    therefore cost) it removes."""
+    resource. That's a reasonable proxy, since removing, downsizing, or
+    rescheduling compute reduces energy draw roughly in proportion to the
+    compute (and therefore cost) it removes."""
     resource_by_id = {r.resource_id: r for r in resources}
     reduction_kg_per_month = 0.0
     for f in findings:
