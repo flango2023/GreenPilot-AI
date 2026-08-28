@@ -135,7 +135,7 @@ The pilot program starts with a free read-only assessment. Paid optimization sup
 
 From the site's About page:
 
-> Richard Schmitz is building GreenPilot AI from Lisbon. His background is in AI and machine learning. GreenPilot started from a direct problem: European SMEs running AWS don't have the tooling to manage cloud cost, carbon, and governance without an enterprise-scale team.
+> Richard Schmitz is building GreenPilot AI in the EU. His background is in AI and machine learning. GreenPilot started from a direct problem: European SMEs running AWS don't have the tooling to manage cloud cost, carbon, and governance without an enterprise-scale team.
 
 Links:
 
