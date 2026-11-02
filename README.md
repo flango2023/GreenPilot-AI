@@ -62,6 +62,39 @@ Every finding includes an estimated saving, an effort level, and a rollback note
   <img src="docs/screenshots/platform-features.png" alt="GreenPilot AI platform: Cost Optimization, Carbon-Aware Insights, EU Governance Support, Approval-Based Automation" width="100%" />
 </p>
 
+## Carbon-aware workload telemetry (Phase 1)
+
+The checks above are a one-shot snapshot: cost and carbon *right now*, using a single annual-average grid intensity per region. But a grid's carbon intensity swings through the day (clean overnight, dirty at the evening peak), so *when* and *where* a workload runs changes its emissions, sometimes by tens of percent. Phase 1 adds that missing time dimension.
+
+It introduces a `Workload` (a unit of work over time, which may map to one or more resources, or later to an AI agent) and an hourly `GridIntensitySeries`, then measures carbon per workload over an arbitrary window, hour by hour. The series falls back to the existing annual-average table whenever no hourly data is present, so the snapshot numbers above are unchanged. Full design: [docs/phase1-workload-carbon-telemetry.md](docs/phase1-workload-carbon-telemetry.md).
+
+Two commands, both fully offline against the committed sample data:
+
+```bash
+# Find the lowest-carbon start hour for a deferrable job.
+python -m greenpilot telemetry greenest-window --workload nightly-etl --duration-hours 6
+
+# Record one carbon sample per workload for a time window, appended to a log.
+python -m greenpilot telemetry record \
+    --window-start 2026-01-01T18:00 --window-end 2026-01-02T00:00 \
+    -o telemetry.csv
+```
+
+`greenest-window` reports the greenest and dirtiest windows and the spread between them; for the sample `nightly-etl` batch job in Frankfurt it finds a ~52% lower-carbon window overnight versus the evening peak. `record` writes an **append-only** `telemetry.csv` (`workload_id, window_start, window_end, region, kwh, g_co2e_per_kwh, co2e_kg, monthly_cost_eur`), one row per workload per run, never rewriting past rows. That log is the per-workload, carbon-over-time dataset the roadmap's later carbon-aware routing builds on.
+
+This phase measures and recommends only; it never moves or changes a workload, keeping the product's "we only read, you approve" guarantee. The hourly grid curve in `sample_data/grid_intensity_hourly.csv` is illustrative (daily averages anchored to the existing per-region table), not a live feed.
+
+## Carbon-aware routing (Phase 2)
+
+Phase 1 finds the cleanest hour; Phase 2 turns that signal into a **constrained recommendation** that honors each workload's real limits: `deferrable` (may it time-shift?), `movable` (may it region-shift?), and `deadline_hours` (how far may its start slip?). A customer-facing API marked neither deferrable nor movable is never touched; a nightly batch can slip within its SLA; a relocatable training job can move to a cleaner grid entirely. Full design: [docs/phase2-carbon-aware-routing.md](docs/phase2-carbon-aware-routing.md).
+
+```bash
+python -m greenpilot route recommend --workload model-training \
+    --duration-hours 4 --now-hour 18 --allowed-regions eu-north-1,eu-central-1
+```
+
+For the sample workloads this recommends time-shifting `nightly-etl` overnight for a ~46% lower carbon intensity (region unchanged, it is not movable), relocating the movable `model-training` job to eu-north-1 for a ~97% cut, and **declining to move** `api-service` at all, with the reason stated. Every recommendation keeps the baseline (what running now would emit) so the counterfactual is auditable. Nothing is executed; it is a recommendation requiring approval, same as the rest of the engine.
+
 ## How it's built
 
 ```mermaid
@@ -93,18 +126,21 @@ Full write-up, including how this maps to the live product's five-stage flow (Co
 ```
 src/greenpilot/
 ├── models.py                 # Resource, IamUser, Finding, CarbonEstimate, Report
+│                             # + Phase 1: Workload, GridIntensitySeries,
+│                             #   GridIntensityPoint, WorkloadCarbonSample
 ├── credential_report.py      # parses an AWS IAM credential report (live or sample)
 ├── rules/
 │   ├── cost_rules.py         # the 5 waste checks above
-│   ├── carbon.py              # CO2e formula
+│   ├── carbon.py              # CO2e formula + Phase 1 time-aware window math
 │   └── governance_rules.py   # GDPR, NIS2 (incl. credential hygiene), CSRD
 ├── engine.py                  # load_resources/load_iam_users + analyze_resources
+│                             #   + load_workloads/load_grid_intensity_series
 ├── aws/collector.py           # boto3: maps a live account onto the same records
 ├── report.py                   # Report -> Markdown
-└── cli.py                      # `greenpilot analyze --source sample|live`
+└── cli.py                      # `greenpilot analyze` + `greenpilot telemetry`
 ```
 
-Demo mode has zero required third-party dependencies: standard library only (`argparse`, `dataclasses`, `csv`, `json`), so `pip install -e .` and running it just works. Live mode adds one optional dependency, `boto3` (`pip install -e ".[aws]"`). 56 tests cover every rule in isolation, both engine paths end-to-end, input validation, output escaping, and the AWS collector itself (via `botocore.stub.Stubber`, so no real AWS account or credentials are needed to run the suite). CI runs them all on every push against Python 3.10 and 3.12.
+Demo mode has zero required third-party dependencies: standard library only (`argparse`, `dataclasses`, `csv`, `json`), so `pip install -e .` and running it just works. Live mode adds one optional dependency, `boto3` (`pip install -e ".[aws]"`). The test suite covers every rule in isolation, both engine paths end-to-end, the Phase 1 workload/telemetry math and CLI, input validation, output escaping, and the AWS collector itself (via `botocore.stub.Stubber`, so no real AWS account or credentials are needed to run the suite). CI runs them all on every push against Python 3.10 and 3.12.
 
 ```bash
 pytest -q
@@ -152,6 +188,8 @@ Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimizati
 - [x] Carbon estimate
 - [x] GDPR / NIS2 / CSRD governance observations, including IAM credential hygiene
 - [x] Live AWS collector via boto3 (EC2, EBS, RDS, S3, CloudWatch, IAM credential reports), tested with `botocore.stub.Stubber`
+- [x] Phase 1: carbon-aware workload telemetry (hourly grid intensity, per-workload carbon over time, `telemetry record` / `greenest-window`)
+- [x] Phase 2: carbon-aware routing policy (`route recommend`, honors deferrable/movable/deadline constraints, region-shifts movable workloads)
 - [x] CI (GitHub Actions, pytest on every push)
 - [x] Least-privilege IAM policy, input validation, output escaping, CodeQL, Dependabot
 - [x] Screenshots of the live site in `docs/screenshots/`
