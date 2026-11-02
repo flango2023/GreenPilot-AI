@@ -95,6 +95,19 @@ python -m greenpilot route recommend --workload model-training \
 
 For the sample workloads this recommends time-shifting `nightly-etl` overnight for a ~46% lower carbon intensity (region unchanged, it is not movable), relocating the movable `model-training` job to eu-north-1 for a ~97% cut, and **declining to move** `api-service` at all, with the reason stated. Every recommendation keeps the baseline (what running now would emit) so the counterfactual is auditable. Nothing is executed; it is a recommendation requiring approval, same as the rest of the engine.
 
+## Live grid-intensity feed (optional)
+
+The figures above use an illustrative hourly curve. For **real** carbon intensity, point any telemetry/routing command at [Electricity Maps](https://www.electricitymaps.com/) with `--grid-source live`. It is strictly opt-in and offline-first: the default path makes zero network calls and needs no key, and the live feed uses only the standard library, so it adds no install-time dependency. Full design: [docs/phase3-live-grid-feed.md](docs/phase3-live-grid-feed.md).
+
+```bash
+export ELECTRICITYMAPS_API_KEY=your_key   # a free Electricity Maps key — not an OpenAI key
+python -m greenpilot route recommend --workload model-training \
+    --duration-hours 4 --now-hour 18 --allowed-regions eu-north-1,eu-central-1 \
+    --grid-source live
+```
+
+Regions with no zone mapping, or hours the feed doesn't cover, fall back to the existing annual-average table, so the result is always usable. If no live data can be fetched at all (e.g. missing key), the command exits with a readable message pointing back to the offline default. The live mapping is fully tested against a recorded response (`tests/test_electricitymaps.py`), so no key or network is needed to run the suite.
+
 ## How it's built
 
 ```mermaid
@@ -190,6 +203,7 @@ Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimizati
 - [x] Live AWS collector via boto3 (EC2, EBS, RDS, S3, CloudWatch, IAM credential reports), tested with `botocore.stub.Stubber`
 - [x] Phase 1: carbon-aware workload telemetry (hourly grid intensity, per-workload carbon over time, `telemetry record` / `greenest-window`)
 - [x] Phase 2: carbon-aware routing policy (`route recommend`, honors deferrable/movable/deadline constraints, region-shifts movable workloads)
+- [x] Optional live grid-intensity feed via Electricity Maps (`--grid-source live`, offline-first, stdlib-only, tested against a recorded response)
 - [x] CI (GitHub Actions, pytest on every push)
 - [x] Least-privilege IAM policy, input validation, output escaping, CodeQL, Dependabot
 - [x] Screenshots of the live site in `docs/screenshots/`
