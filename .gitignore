@@ -21,6 +21,8 @@ telemetry.csv
 # in this repo, committed or not, but keep git from ever staging it by accident.
 .env
 .env.*
+# ...but the committed template carries no secret and should be tracked.
+!.env.example
 *.pem
 *.key
 credentials

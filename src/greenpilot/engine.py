@@ -146,6 +146,31 @@ def load_grid_intensity_series(
     return GridIntensitySeries(points=points, annual_average_by_region=averages)
 
 
+def resolve_grid_series(
+    source: str,
+    sample_path: Path,
+    regions: list[str] | None = None,
+    api_key: str | None = None,
+) -> GridIntensitySeries:
+    """Pick the grid-intensity source behind one seam.
+
+    - 'sample' (default): the committed hourly curve. No network, no key.
+    - 'live': Electricity Maps for the given regions. Requires an API key
+      (ELECTRICITYMAPS_API_KEY or api_key=...). Imported lazily so the live
+      dependency path is never touched in the offline default.
+
+    This keeps every call site unchanged: they ask for a GridIntensitySeries
+    and get one, regardless of where the numbers came from.
+    """
+    if source == "sample":
+        return load_grid_intensity_series(sample_path)
+    if source == "live":
+        from .grid.electricitymaps import fetch_series
+
+        return fetch_series(regions or [], api_key=api_key)
+    raise ValueError(f"Unknown grid source {source!r}; expected 'sample' or 'live'.")
+
+
 def run_cost_rules(resources: list[Resource]) -> list[Finding]:
     findings: list[Finding] = []
     for rule in ALL_COST_RULES:

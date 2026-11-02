@@ -12,13 +12,50 @@ from pathlib import Path
 from .engine import (
     analyze,
     analyze_resources,
-    load_grid_intensity_series,
     load_resources,
     load_workloads,
+    resolve_grid_series,
 )
 from .report import render_markdown
 from .rules.carbon import greenest_start_hour, workload_co2e_kg_for_window
 from .rules.routing import recommend_route
+
+
+def _add_grid_source_args(sub) -> None:
+    """Shared flags for any command that reads grid intensity: choose the
+    offline sample curve (default) or the live Electricity Maps feed."""
+    sub.add_argument(
+        "--grid-source",
+        choices=["sample", "live"],
+        default="sample",
+        help="'sample' uses the committed hourly curve (offline, no key, the "
+        "default). 'live' fetches real data from Electricity Maps for the "
+        "regions below; needs an API key via $ELECTRICITYMAPS_API_KEY or "
+        "--api-key.",
+    )
+    sub.add_argument(
+        "--regions",
+        default="",
+        help="Comma-separated AWS regions to fetch when --grid-source live "
+        "(e.g. eu-west-1,eu-central-1). Ignored for the sample source.",
+    )
+    sub.add_argument(
+        "--api-key",
+        default=None,
+        help="Electricity Maps API key (overrides $ELECTRICITYMAPS_API_KEY). "
+        "Only used with --grid-source live.",
+    )
+
+
+def _resolve_grid_from_args(args):
+    """Build a GridIntensitySeries from the shared grid-source flags."""
+    regions = [r.strip() for r in getattr(args, "regions", "").split(",") if r.strip()]
+    return resolve_grid_series(
+        getattr(args, "grid_source", "sample"),
+        args.grid,
+        regions=regions,
+        api_key=getattr(args, "api_key", None),
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -102,8 +139,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("sample_data/grid_intensity_hourly.csv"),
         help="Path to the hourly grid-intensity CSV "
-        "(default: sample_data/grid_intensity_hourly.csv).",
+        "(default: sample_data/grid_intensity_hourly.csv). Used when "
+        "--grid-source sample.",
     )
+    _add_grid_source_args(record)
     record.add_argument(
         "--window-start",
         required=True,
@@ -137,8 +176,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--grid",
         type=Path,
         default=Path("sample_data/grid_intensity_hourly.csv"),
-        help="Path to the hourly grid-intensity CSV.",
+        help="Path to the hourly grid-intensity CSV (used when "
+        "--grid-source sample).",
     )
+    _add_grid_source_args(greenest)
     greenest.add_argument(
         "--workload",
         required=True,
@@ -206,6 +247,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Only recommend a move if it beats running now-at-home by more "
         "than this percent (default: 0, any strict improvement).",
+    )
+    recommend.add_argument(
+        "--grid-source",
+        choices=["sample", "live"],
+        default="sample",
+        help="'sample' uses the committed hourly curve (offline, the "
+        "default). 'live' fetches real data from Electricity Maps for the "
+        "workload's home region and any --allowed-regions; needs an API key.",
+    )
+    recommend.add_argument(
+        "--api-key",
+        default=None,
+        help="Electricity Maps API key (overrides $ELECTRICITYMAPS_API_KEY). "
+        "Only used with --grid-source live.",
     )
 
     return parser
@@ -277,7 +332,7 @@ def _run_telemetry_record(args) -> int:
 
     resources = {r.resource_id: r for r in load_resources(args.data_dir)}
     workloads = load_workloads(args.workloads)
-    series = load_grid_intensity_series(args.grid)
+    series = _resolve_grid_from_args(args)
 
     samples = [
         workload_co2e_kg_for_window(w, resources, series, start, end)
@@ -323,7 +378,7 @@ def _run_telemetry_greenest_window(args) -> int:
             file=sys.stderr,
         )
 
-    series = load_grid_intensity_series(args.grid)
+    series = _resolve_grid_from_args(args)
     best_hour, best_avg = greenest_start_hour(
         workload.region, series, args.duration_hours
     )
@@ -377,8 +432,15 @@ def _run_route_recommend(args) -> int:
             f"{', '.join(sorted(workloads)) or '(none)'}"
         )
 
-    series = load_grid_intensity_series(args.grid)
     allowed = [r.strip() for r in args.allowed_regions.split(",") if r.strip()]
+    if getattr(args, "grid_source", "sample") == "live":
+        # Fetch live data for the workload's home region plus any it may move to.
+        fetch_regions = [workload.region] + [r for r in allowed if r != workload.region]
+        series = resolve_grid_series(
+            "live", args.grid, regions=fetch_regions, api_key=args.api_key
+        )
+    else:
+        series = resolve_grid_series("sample", args.grid)
 
     rec = recommend_route(
         workload,
@@ -413,17 +475,30 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    # Commands that may use the live grid feed share one clean error path:
+    # a feed problem (missing key, unreachable API, no data) exits with a
+    # readable message instead of a traceback.
+    from .grid.electricitymaps import ElectricityMapsError
+
     if args.command == "route":
         if args.route_command == "recommend":
-            return _run_route_recommend(args)
+            try:
+                return _run_route_recommend(args)
+            except ElectricityMapsError as exc:
+                print(f"Live grid feed unavailable: {exc}", file=sys.stderr)
+                raise SystemExit(1)
         parser.error(f"Unknown route command: {args.route_command}")
         return 2
 
     if args.command == "telemetry":
-        if args.telemetry_command == "record":
-            return _run_telemetry_record(args)
-        if args.telemetry_command == "greenest-window":
-            return _run_telemetry_greenest_window(args)
+        try:
+            if args.telemetry_command == "record":
+                return _run_telemetry_record(args)
+            if args.telemetry_command == "greenest-window":
+                return _run_telemetry_greenest_window(args)
+        except ElectricityMapsError as exc:
+            print(f"Live grid feed unavailable: {exc}", file=sys.stderr)
+            raise SystemExit(1)
         parser.error(f"Unknown telemetry command: {args.telemetry_command}")
         return 2
 
