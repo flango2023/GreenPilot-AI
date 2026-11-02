@@ -25,6 +25,10 @@ def test_unknown_source_raises():
 
 def test_live_source_without_key_raises(monkeypatch):
     monkeypatch.delenv("ELECTRICITYMAPS_API_KEY", raising=False)
+    # Neutralize any ambient .env so this isolates the truly-absent-key case.
+    monkeypatch.setattr(
+        "greenpilot.grid.electricitymaps._load_dotenv_key", lambda *a, **k: None
+    )
     from greenpilot.grid.electricitymaps import ElectricityMapsError
 
     with pytest.raises(ElectricityMapsError):

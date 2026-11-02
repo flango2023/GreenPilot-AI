@@ -71,9 +71,37 @@ def _default_fetch(url: str, headers: dict) -> dict:
         ) from exc
 
 
+def _load_dotenv_key(start: "os.PathLike | str | None" = None) -> str | None:
+    """Best-effort read of ELECTRICITYMAPS_API_KEY from a .env file, walking
+    up from the current directory. Dependency-free (no python-dotenv), and
+    never overrides an already-set environment variable. Returns None if no
+    .env or key is found. Malformed files are ignored silently rather than
+    breaking the offline path."""
+    import pathlib
+
+    cwd = pathlib.Path(start or os.getcwd()).resolve()
+    for directory in [cwd, *cwd.parents]:
+        candidate = directory / ".env"
+        if not candidate.is_file():
+            continue
+        try:
+            for raw in candidate.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                name, _, value = line.partition("=")
+                if name.strip() == ENV_API_KEY:
+                    return value.strip().strip("'").strip('"') or None
+        except OSError:
+            return None
+        return None  # .env found but no key line
+    return None
+
+
 def resolve_api_key(explicit: str | None = None) -> str | None:
-    """The explicit key if given, else the env var, else None (offline)."""
-    return explicit or os.environ.get(ENV_API_KEY)
+    """The explicit key if given, else the env var, else a .env file, else
+    None (offline)."""
+    return explicit or os.environ.get(ENV_API_KEY) or _load_dotenv_key()
 
 
 def _history_to_points(region: str, history: list[dict]) -> list[GridIntensityPoint]:

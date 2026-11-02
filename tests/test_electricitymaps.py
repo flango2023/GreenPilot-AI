@@ -35,11 +35,19 @@ def test_resolve_api_key_prefers_explicit(monkeypatch):
 
 def test_resolve_api_key_none_when_absent(monkeypatch):
     monkeypatch.delenv("ELECTRICITYMAPS_API_KEY", raising=False)
+    # Also neutralize any ambient .env file so this tests the truly-absent
+    # case regardless of the developer's local setup.
+    monkeypatch.setattr(
+        "greenpilot.grid.electricitymaps._load_dotenv_key", lambda *a, **k: None
+    )
     assert resolve_api_key(None) is None
 
 
 def test_missing_key_raises_clear_error(monkeypatch):
     monkeypatch.delenv("ELECTRICITYMAPS_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "greenpilot.grid.electricitymaps._load_dotenv_key", lambda *a, **k: None
+    )
     with pytest.raises(ElectricityMapsError) as exc:
         fetch_series(["eu-west-1"], api_key=None, fetch=lambda u, h: {})
     assert "API key" in str(exc.value)
@@ -115,3 +123,22 @@ def test_zone_map_covers_sample_regions():
     # The three EU regions used across sample_data must all have a zone.
     for region in ("eu-west-1", "eu-central-1", "eu-north-1"):
         assert region in AWS_REGION_TO_EM_ZONE
+
+
+def test_dotenv_loader_reads_key_from_file(tmp_path, monkeypatch):
+    from greenpilot.grid.electricitymaps import _load_dotenv_key
+
+    env = tmp_path / ".env"
+    env.write_text(
+        "# a comment\n"
+        "OTHER_VAR=ignored\n"
+        "ELECTRICITYMAPS_API_KEY='secret-from-file'\n",
+        encoding="utf-8",
+    )
+    assert _load_dotenv_key(start=tmp_path) == "secret-from-file"
+
+
+def test_dotenv_loader_returns_none_when_no_file(tmp_path):
+    from greenpilot.grid.electricitymaps import _load_dotenv_key
+
+    assert _load_dotenv_key(start=tmp_path) is None
