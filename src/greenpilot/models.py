@@ -237,3 +237,41 @@ class WorkloadCarbonSample:
     g_co2e_per_kwh: float  # effective (window-averaged) intensity used
     co2e_kg: float
     monthly_cost_eur: float
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: carbon-aware routing (additive, see
+# docs/phase2-carbon-aware-routing.md). These describe a *recommendation*
+# only; nothing in this engine executes or moves a workload.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RoutingCandidate:
+    """One feasible place+time to run a workload, scored by average grid
+    intensity over the run (from a GridIntensitySeries)."""
+
+    region: str
+    start_hour: int
+    avg_intensity_g_per_kwh: float
+
+
+@dataclass
+class RoutingRecommendation:
+    """The outcome of the routing policy for one workload.
+
+    Deliberately explicit about what moved and why: ``chosen`` equals the
+    baseline (reduction 0%) when no safe improvement exists, so the record
+    always carries the counterfactual the later marketplace phase needs.
+    """
+
+    workload_id: str
+    baseline_region: str
+    baseline_start_hour: int
+    baseline_intensity: float
+    chosen: RoutingCandidate
+    duration_hours: int
+    moved_in_time: bool
+    moved_in_region: bool
+    intensity_reduction_pct: float
+    reason: str

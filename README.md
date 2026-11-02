@@ -84,6 +84,17 @@ python -m greenpilot telemetry record \
 
 This phase measures and recommends only; it never moves or changes a workload, keeping the product's "we only read, you approve" guarantee. The hourly grid curve in `sample_data/grid_intensity_hourly.csv` is illustrative (daily averages anchored to the existing per-region table), not a live feed.
 
+## Carbon-aware routing (Phase 2)
+
+Phase 1 finds the cleanest hour; Phase 2 turns that signal into a **constrained recommendation** that honors each workload's real limits: `deferrable` (may it time-shift?), `movable` (may it region-shift?), and `deadline_hours` (how far may its start slip?). A customer-facing API marked neither deferrable nor movable is never touched; a nightly batch can slip within its SLA; a relocatable training job can move to a cleaner grid entirely. Full design: [docs/phase2-carbon-aware-routing.md](docs/phase2-carbon-aware-routing.md).
+
+```bash
+python -m greenpilot route recommend --workload model-training \
+    --duration-hours 4 --now-hour 18 --allowed-regions eu-north-1,eu-central-1
+```
+
+For the sample workloads this recommends time-shifting `nightly-etl` overnight for a ~46% lower carbon intensity (region unchanged, it is not movable), relocating the movable `model-training` job to eu-north-1 for a ~97% cut, and **declining to move** `api-service` at all, with the reason stated. Every recommendation keeps the baseline (what running now would emit) so the counterfactual is auditable. Nothing is executed; it is a recommendation requiring approval, same as the rest of the engine.
+
 ## How it's built
 
 ```mermaid
@@ -178,7 +189,7 @@ Roadmap items mentioned on the live site (Azure/GCP support, ML-based optimizati
 - [x] GDPR / NIS2 / CSRD governance observations, including IAM credential hygiene
 - [x] Live AWS collector via boto3 (EC2, EBS, RDS, S3, CloudWatch, IAM credential reports), tested with `botocore.stub.Stubber`
 - [x] Phase 1: carbon-aware workload telemetry (hourly grid intensity, per-workload carbon over time, `telemetry record` / `greenest-window`)
-- [ ] Phase 2: carbon-aware routing policy (respect SLAs/deadlines, region-shift movable workloads) — in progress
+- [x] Phase 2: carbon-aware routing policy (`route recommend`, honors deferrable/movable/deadline constraints, region-shifts movable workloads)
 - [x] CI (GitHub Actions, pytest on every push)
 - [x] Least-privilege IAM policy, input validation, output escaping, CodeQL, Dependabot
 - [x] Screenshots of the live site in `docs/screenshots/`

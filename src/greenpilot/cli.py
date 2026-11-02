@@ -18,6 +18,7 @@ from .engine import (
 )
 from .report import render_markdown
 from .rules.carbon import greenest_start_hour, workload_co2e_kg_for_window
+from .rules.routing import recommend_route
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -148,6 +149,63 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         required=True,
         help="How many whole hours the job runs.",
+    )
+
+    # --- Phase 2: carbon-aware routing policy -------------------------------
+    route_parser = subparsers.add_parser(
+        "route",
+        help="Phase 2: recommend a safe, carbon-minimizing slot for a "
+        "workload, honoring its deferrable/movable/deadline constraints.",
+    )
+    route_sub = route_parser.add_subparsers(dest="route_command", required=True)
+
+    recommend = route_sub.add_parser(
+        "recommend",
+        help="Recommend the lowest-carbon feasible (region, start hour) for a "
+        "workload, or decline to move it. Nothing is executed.",
+    )
+    recommend.add_argument(
+        "--workloads",
+        type=Path,
+        default=Path("sample_data/workloads.json"),
+        help="Path to workloads.json (default: sample_data/workloads.json).",
+    )
+    recommend.add_argument(
+        "--grid",
+        type=Path,
+        default=Path("sample_data/grid_intensity_hourly.csv"),
+        help="Path to the hourly grid-intensity CSV.",
+    )
+    recommend.add_argument(
+        "--workload",
+        required=True,
+        help="workload_id to route (must exist in the workloads file).",
+    )
+    recommend.add_argument(
+        "--duration-hours",
+        type=int,
+        required=True,
+        help="How many whole hours the job runs.",
+    )
+    recommend.add_argument(
+        "--now-hour",
+        type=int,
+        required=True,
+        help="Current hour of day (0-23) the job would otherwise start.",
+    )
+    recommend.add_argument(
+        "--allowed-regions",
+        default="",
+        help="Comma-separated regions the workload may be moved to (only "
+        "used if the workload is movable). The home region is always "
+        "considered.",
+    )
+    recommend.add_argument(
+        "--min-improvement-pct",
+        type=float,
+        default=0.0,
+        help="Only recommend a move if it beats running now-at-home by more "
+        "than this percent (default: 0, any strict improvement).",
     )
 
     return parser
@@ -305,9 +363,61 @@ def _run_telemetry_greenest_window(args) -> int:
     return 0
 
 
+def _run_route_recommend(args) -> int:
+    if not 0 <= args.now_hour <= 23:
+        raise SystemExit("--now-hour must be 0-23.")
+    if args.duration_hours <= 0:
+        raise SystemExit("--duration-hours must be positive.")
+
+    workloads = {w.workload_id: w for w in load_workloads(args.workloads)}
+    workload = workloads.get(args.workload)
+    if workload is None:
+        raise SystemExit(
+            f"workload {args.workload!r} not found. Available: "
+            f"{', '.join(sorted(workloads)) or '(none)'}"
+        )
+
+    series = load_grid_intensity_series(args.grid)
+    allowed = [r.strip() for r in args.allowed_regions.split(",") if r.strip()]
+
+    rec = recommend_route(
+        workload,
+        series,
+        duration_hours=args.duration_hours,
+        now_hour=args.now_hour,
+        allowed_regions=allowed or None,
+        min_improvement_pct=args.min_improvement_pct,
+    )
+
+    print(
+        f"Workload: {rec.workload_id}  "
+        f"(deferrable={'yes' if workload.deferrable else 'no'}, "
+        f"movable={'yes' if workload.movable else 'no'})"
+    )
+    print(
+        f"Baseline: run now {rec.baseline_start_hour:02d}:00 in "
+        f"{rec.baseline_region}  -> {rec.baseline_intensity:.0f} gCO2e/kWh"
+    )
+    print(
+        f"Recommend: start {rec.chosen.start_hour:02d}:00 in "
+        f"{rec.chosen.region}  -> "
+        f"{rec.chosen.avg_intensity_g_per_kwh:.0f} gCO2e/kWh"
+    )
+    print(rec.reason)
+    if rec.intensity_reduction_pct > 0:
+        print(f"-> {rec.intensity_reduction_pct:.0f}% lower carbon intensity.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "route":
+        if args.route_command == "recommend":
+            return _run_route_recommend(args)
+        parser.error(f"Unknown route command: {args.route_command}")
+        return 2
 
     if args.command == "telemetry":
         if args.telemetry_command == "record":
