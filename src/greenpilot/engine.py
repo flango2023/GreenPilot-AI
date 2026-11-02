@@ -25,8 +25,16 @@ from datetime import date
 from pathlib import Path
 
 from .credential_report import parse_credential_report
-from .models import Finding, IamUser, Report, Resource
-from .rules.carbon import build_carbon_estimate
+from .models import (
+    Finding,
+    GridIntensityPoint,
+    GridIntensitySeries,
+    IamUser,
+    Report,
+    Resource,
+    Workload,
+)
+from .rules.carbon import REGION_GRID_INTENSITY_G_PER_KWH, build_carbon_estimate
 from .rules.cost_rules import ALL_COST_RULES
 from .rules.governance_rules import (
     ALL_GOVERNANCE_RESOURCE_RULES,
@@ -90,6 +98,52 @@ def load_iam_users(data_dir: Path) -> list[IamUser]:
     if not path.exists():
         return []
     return parse_credential_report(path.read_text(encoding="utf-8"))
+
+
+_WORKLOAD_FIELD_NAMES = {f.name for f in fields(Workload)}
+
+
+def load_workloads(path: Path) -> list[Workload]:
+    """Load Phase 1 workloads.json: a list of Workload records that reference
+    resource_ids from resource_inventory.json. See
+    docs/phase1-workload-carbon-telemetry.md."""
+    items = json.loads(Path(path).read_text(encoding="utf-8"))
+    workloads = []
+    for item in items:
+        unknown = set(item) - _WORKLOAD_FIELD_NAMES
+        if unknown:
+            raise ValueError(
+                f"workload {item.get('workload_id', '?')!r} has unknown "
+                f"field(s): {sorted(unknown)}"
+            )
+        workloads.append(Workload(**item))
+    return workloads
+
+
+def load_grid_intensity_series(
+    path: Path,
+    annual_average_by_region: dict[str, float] | None = None,
+) -> GridIntensitySeries:
+    """Load Phase 1 grid_intensity_hourly.csv (region,hour_of_day,
+    g_co2e_per_kwh) into a GridIntensitySeries. Falls back to the engine's
+    existing annual-average table for any (region, hour) not covered, which
+    is what keeps the old snapshot numbers reproducible."""
+    points = []
+    with Path(path).open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            points.append(
+                GridIntensityPoint(
+                    region=row["region"],
+                    hour_of_day=int(row["hour_of_day"]),
+                    g_co2e_per_kwh=float(row["g_co2e_per_kwh"]),
+                )
+            )
+    averages = (
+        annual_average_by_region
+        if annual_average_by_region is not None
+        else dict(REGION_GRID_INTENSITY_G_PER_KWH)
+    )
+    return GridIntensitySeries(points=points, annual_average_by_region=averages)
 
 
 def run_cost_rules(resources: list[Resource]) -> list[Finding]:

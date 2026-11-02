@@ -1,0 +1,44 @@
+[
+  {
+    "workload_id": "api-service",
+    "name": "Customer-facing API",
+    "kind": "service",
+    "region": "eu-west-1",
+    "resource_ids": ["ec2-api-06", "rds-primary-01"],
+    "deferrable": false,
+    "movable": false,
+    "tags": {"team": "platform", "tier": "prod"}
+  },
+  {
+    "workload_id": "nightly-etl",
+    "name": "Nightly data ETL batch",
+    "kind": "batch",
+    "region": "eu-central-1",
+    "resource_ids": ["ec2-batch-02", "rds-analytics-03"],
+    "deferrable": true,
+    "movable": false,
+    "deadline_hours": 8,
+    "tags": {"team": "data", "tier": "prod"}
+  },
+  {
+    "workload_id": "model-training",
+    "name": "Weekly model retraining",
+    "kind": "training",
+    "region": "eu-west-1",
+    "resource_ids": ["ec2-batch-02"],
+    "deferrable": true,
+    "movable": true,
+    "deadline_hours": 24,
+    "tags": {"team": "ml", "tier": "prod"}
+  },
+  {
+    "workload_id": "dev-sandbox",
+    "name": "Developer sandbox",
+    "kind": "service",
+    "region": "eu-west-1",
+    "resource_ids": ["ec2-dev-04"],
+    "deferrable": true,
+    "movable": false,
+    "tags": {"team": "web", "tier": "dev"}
+  }
+]

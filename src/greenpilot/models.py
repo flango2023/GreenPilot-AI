@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from typing import Literal, Optional
+
+WorkloadKind = Literal["service", "batch", "inference", "training", "agent"]
 
 Service = Literal["EC2", "RDS", "EBS", "S3", "ACCOUNT"]
 Effort = Literal["low", "medium", "high"]
@@ -133,3 +135,105 @@ class Report:
             self.cost_findings,
             key=lambda f: (-f.monthly_savings, effort_rank[f.effort]),
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 1: carbon-aware workload telemetry (additive, see
+# docs/phase1-workload-carbon-telemetry.md). None of the types below change
+# the existing snapshot report; they add a time dimension and a per-workload
+# view that the routing (Phase 2) and marketplace (Phase 3) work build on.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Workload:
+    """A unit of work that runs over time.
+
+    Deliberately NOT an AWS ``Resource``: a workload may map to one resource,
+    several, or (later) to an AI agent. ``deferrable``/``movable`` are the
+    scheduling levers Phase 2's carbon-aware routing will pull.
+    """
+
+    workload_id: str
+    name: str
+    kind: WorkloadKind
+    region: str
+    resource_ids: list[str] = field(default_factory=list)
+    deferrable: bool = False  # can it be time-shifted within its deadline?
+    movable: bool = False  # can it be run in a different region?
+    deadline_hours: Optional[float] = None
+    tags: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class GridIntensityPoint:
+    """Grid carbon intensity for one region in one hour-of-day bucket.
+
+    ``hour_of_day`` is 0-23 in the grid's local time. This is the single
+    change that lets the engine see the intra-day swing the annual-average
+    ``REGION_GRID_INTENSITY_G_PER_KWH`` table in carbon.py cannot.
+    """
+
+    region: str
+    hour_of_day: int
+    g_co2e_per_kwh: float
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.hour_of_day <= 23:
+            raise ValueError(
+                f"hour_of_day must be 0-23, got {self.hour_of_day} "
+                f"for region {self.region!r}"
+            )
+        if self.g_co2e_per_kwh < 0:
+            raise ValueError(
+                f"g_co2e_per_kwh must be non-negative, got "
+                f"{self.g_co2e_per_kwh} for region {self.region!r}"
+            )
+
+
+@dataclass
+class GridIntensitySeries:
+    """A lookup of hourly grid intensity, with a safe fallback.
+
+    When no hourly point exists for a (region, hour), ``intensity`` falls
+    back to ``annual_average_by_region`` and finally to ``default``. That
+    fallback is what keeps the existing snapshot path producing identical
+    numbers when no hourly data is supplied.
+    """
+
+    points: list[GridIntensityPoint] = field(default_factory=list)
+    annual_average_by_region: dict[str, float] = field(default_factory=dict)
+    default: float = 400.0
+
+    def __post_init__(self) -> None:
+        # Index (region, hour) -> gCO2e/kWh for O(1) lookups. Later points
+        # for the same key win, which makes overriding a curve predictable.
+        self._index: dict[tuple[str, int], float] = {}
+        for p in self.points:
+            self._index[(p.region, p.hour_of_day)] = p.g_co2e_per_kwh
+
+    def intensity(self, region: str, hour_of_day: int) -> float:
+        """gCO2e/kWh for a region at a given hour, with graceful fallback."""
+        hourly = self._index.get((region, hour_of_day))
+        if hourly is not None:
+            return hourly
+        return self.annual_average_by_region.get(region, self.default)
+
+
+@dataclass
+class WorkloadCarbonSample:
+    """One append-only telemetry row: the carbon of a workload over a window.
+
+    This is the record the data flywheel accumulates. It is meant to be
+    written once and never mutated, so a sequence of samples forms the audit
+    trail Phase 3's CSRD/marketplace record is built on.
+    """
+
+    workload_id: str
+    window_start: datetime
+    window_end: datetime
+    region: str
+    kwh: float
+    g_co2e_per_kwh: float  # effective (window-averaged) intensity used
+    co2e_kg: float
+    monthly_cost_eur: float
