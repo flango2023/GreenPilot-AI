@@ -108,6 +108,8 @@ python -m greenpilot route recommend --workload model-training \
 
 Regions with no zone mapping, or hours the feed doesn't cover, fall back to the existing annual-average table, so the result is always usable. If no live data can be fetched at all (e.g. missing key), the command exits with a readable message pointing back to the offline default. The live mapping is fully tested against a recorded response (`tests/test_electricitymaps.py`), so no key or network is needed to run the suite.
 
+A **real captured example** of this running on live Electricity Maps data — a 93% cut for a relocatable job, an honest 3% for a region-locked one, and a correctly-declined production service — is committed at [reports/live_carbon_routing_example.md](reports/live_carbon_routing_example.md), so you can see the output without a key or a clone.
+
 ## How it's built
 
 ```mermaid

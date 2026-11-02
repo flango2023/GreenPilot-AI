@@ -1,0 +1,5 @@
+workload_id,window_start,window_end,region,kwh,g_co2e_per_kwh,co2e_kg,monthly_cost_eur
+api-service,2026-11-02T18:00:00,2026-11-03T00:00:00,eu-west-1,0.6,358.0,0.2148,640.0
+nightly-etl,2026-11-02T18:00:00,2026-11-03T00:00:00,eu-central-1,0.42,511.5,0.21483,980.0
+model-training,2026-11-02T18:00:00,2026-11-03T00:00:00,eu-west-1,0.24,358.0,0.08592,640.0
+dev-sandbox,2026-11-02T18:00:00,2026-11-03T00:00:00,eu-west-1,0.09,358.0,0.03222,180.0

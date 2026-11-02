@@ -13,6 +13,8 @@ venv/
 # Generated reports (the committed reports/sample_report.md is kept on purpose)
 reports/*.md
 !reports/sample_report.md
+# ...and the committed live worked-example report is kept on purpose too.
+!reports/live_carbon_routing_example.md
 # Phase 1 telemetry output is a generated, append-only log, not source.
 telemetry.csv
 
